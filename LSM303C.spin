@@ -8,8 +8,8 @@ john@leemangeophysical.com
 CON
 
   ' Addresses
-  ACCELEROMETER_ADDR = $3A
-  MAGNETOMETER_ADDR = $3C
+  ACCELEROMETER_ADDR = $1D       
+  MAGNETOMETER_ADDR = $1E
   
   ' Accelerometer Registers
   WHO_AM_I_A = $0F
@@ -92,7 +92,7 @@ PUB getDevIdAccelerometer : id
 
 PUB setAccResolution(resolution)
   ' Sets the magnetometer resolution (1) = high, (0) = normal
-  if resolution = 0
+  if resolution == 0
     resolution := $0
   else
     resolution := $1
@@ -108,7 +108,7 @@ PUB setAccDataRate(rate)| sampleRateEnum, rate_config
  
 PUB setAccBlockDataUpdate(bdu)
   ' (0) = continuous, (1) = high resolution
-  if bdu = 1
+  if bdu == 1
     bdu := $1
   else
     bdu := $0
@@ -142,9 +142,9 @@ PUB softResetAcc
   
 PUB setAccDecimation(decimation) | decimationEnum, decimationConfig
   ' Set decimation of acceleration out OUT REG and FIFO
-  decimationEnum := lookdown(deicmation: 0, 2, 4, 8)
+  decimationEnum := lookdown(decimation: 0, 2, 4, 8)
   decimationConfig := lookup(decimationEnum: $0, $1, $2, $3)
-  changeRegister(ACCELEROMETER_ADDR, CTRL_REG5_A, %0011_1000, scale_config << 4)
+  changeRegister(ACCELEROMETER_ADDR, CTRL_REG5_A, %0011_1000, decimationConfig << 4)
 
 PUB rebootAcc
   ' Force reboot accelerometer
@@ -154,8 +154,8 @@ PUB rebootAcc
 PUB getXAcc : xAcc
   ' Reads the x-axis acceleration. It's a 16-bit two's complement value
   ' that is then modified to return actual acceleration values
-  xAcc := I2C.readByte(ACCELEROMETER_ADDR, OUT_X_H_A) << 24
-  xAcc |= I2C.readByte(ACCELEROMETER_ADDR, OUT_X_L_A) << 16
+  xAcc := \I2C.readByte(ACCELEROMETER_ADDR, OUT_X_H_A) << 24
+  xAcc |= \I2C.readByte(ACCELEROMETER_ADDR, OUT_X_L_A) << 16
   xAcc ~>= (16)
   ' TODO: Do calibration here
   return
@@ -163,8 +163,8 @@ PUB getXAcc : xAcc
 PUB getYAcc : yAcc
   ' Reads the y-axis acceleration. It's a 16-bit two's complement value
   ' that is then modified to return actual acceleration values
-  yAcc := I2C.readByte(ACCELEROMETER_ADDR, OUT_Y_H_A) << 24
-  yAcc |= I2C.readByte(ACCELEROMETER_ADDR, OUT_Y_L_A) << 16
+  yAcc := \I2C.readByte(ACCELEROMETER_ADDR, OUT_Y_H_A) << 24
+  yAcc |= \I2C.readByte(ACCELEROMETER_ADDR, OUT_Y_L_A) << 16
   yAcc ~>= (16)
   ' TODO: Do calibration here
   return
@@ -172,8 +172,8 @@ PUB getYAcc : yAcc
 PUB getZAcc : zAcc
   ' Reads the z-axis acceleration. It's a 16-bit two's complement value
   ' that is then modified to return actual acceleration values
-  zAcc := I2C.readByte(ACCELEROMETER_ADDR, OUT_Z_H_A) << 24
-  zAcc |= I2C.readByte(ACCELEROMETER_ADDR, OUT_Z_L_A) << 16
+  zAcc := \I2C.readByte(ACCELEROMETER_ADDR, OUT_Z_H_A) << 24
+  zAcc |= \I2C.readByte(ACCELEROMETER_ADDR, OUT_Z_L_A) << 16
   zAcc ~>= (16)
   ' TODO: Do calibration here
   return
@@ -189,7 +189,7 @@ PUB getDevIdMagnetometer : id
 
 PUB setMagTemperatureEnable(enable)
   ' (0) = disabled, (1) = enabled
-  if enable = 1
+  if enable == 1
     enable := $1
   else
     enable := $0
@@ -205,10 +205,10 @@ PUB setMagMode(mode)
   ' Anything over 3 is clamped to 3
   if mode > 3
     mode := 3
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG1_M, %0110_0000, enable << 5)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG1_M, %0110_0000, mode << 5)
   
   
-PUB setMagDataRate(rate)
+PUB setMagDataRate(rate) | sampleRateEnum, rateConfig
   ' Set magnetometer data rate options are 0.625, 1.25, 2.5, 5, 10, 20, 40, 80
   ' Note that the fractional rates are represented as 0, 1, 2
   sampleRateEnum := lookdown(rate:   0, 1, 2, 5, 10, 20, 40, 80)
@@ -216,9 +216,9 @@ PUB setMagDataRate(rate)
   changeRegister(MAGNETOMETER_ADDR, CTRL_REG1_M, %0001_1100, rateConfig << 2 )
 
 
-PUB setMagRange()
+PUB setMagRange
   ' This magnetometer only has a +/-16 Gauss range, so set it
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG2_M %0110_0000, $3 << 5)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG2_M, %0110_0000, $3 << 5)
   
   
 PUB softResetMag
@@ -236,8 +236,8 @@ PUB setMagSensorMode(mode)
   ' 1 = Single-conversion mode (must be used for 0.625 - 80 Hz conversion)
   ' 2 = Power-down mode
   ' 3 = Power-down mode
-  ' Default is 2 (power-down)
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG3_M, %0000_0011, mode)
+  ' Default is 3 (power-down)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG3_M, %0000_0011, $1)
   
   
 PUB setMagZAxisMode(mode)
@@ -249,12 +249,12 @@ PUB setMagZAxisMode(mode)
   ' Anything over 3 is clamped to 3
   if mode > 3
     mode := 3
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG4_M, %0000_1100, enable << 2)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG4_M, %0000_1100, mode << 2)
   
   
 PUB setMagBlockDataUpdate(bdu)
   ' (0) = continuous, (1) = wait on MSB and LSB read
-  if bdu = 1
+  if bdu == 1
     bdu := $1
   else
     bdu := $0
@@ -262,27 +262,27 @@ PUB setMagBlockDataUpdate(bdu)
 
 
 PUB getTemperature : temp
-  temp := I2C.readByte(MAGNETOMETER_ADDR, TEMP_H_M) << 24
-  temp |= I2C.readByte(MAGNETOMETER_ADDR, TEMP_L_M) << 16
+  temp := \I2C.readByte(MAGNETOMETER_ADDR, TEMP_H_M) << 24
+  temp |= \I2C.readByte(MAGNETOMETER_ADDR, TEMP_L_M) << 16
   temp ~>= (20)
   ' Do calibration here
   return
 
 PUB getXMag : xMag
-  xMag := I2C.readByte(MAGNETOMETER_ADDR, OUT_X_H_M) << 24
-  xMag |= I2C.readByte(MAGNETOMETER_ADDR, OUT_X_L_M) << 16
+  xMag := \I2C.readByte(MAGNETOMETER_ADDR, OUT_X_H_M) << 24
+  xMag |= \I2C.readByte(MAGNETOMETER_ADDR, OUT_X_L_M) << 16
   xMag ~>= (16)
   return
 
 PUB getYMag : yMag
-  yMag := I2C.readByte(MAGNETOMETER_ADDR, OUT_Y_H_M) << 24
-  yMag |= I2C.readByte(MAGNETOMETER_ADDR, OUT_Y_L_M) << 16
+  yMag := \I2C.readByte(MAGNETOMETER_ADDR, OUT_Y_H_M) << 24
+  yMag |= \I2C.readByte(MAGNETOMETER_ADDR, OUT_Y_L_M) << 16
   yMag ~>= (16)
   return
 
 PUB getZMag : zMag
-  zMag := I2C.readByte(MAGNETOMETER_ADDR, OUT_Z_H_M) << 24
-  zMag |= I2C.readByte(MAGNETOMETER_ADDR, OUT_Z_L_M) << 16
+  zMag := \I2C.readByte(MAGNETOMETER_ADDR, OUT_Z_H_M) << 24
+  zMag |= \I2C.readByte(MAGNETOMETER_ADDR, OUT_Z_L_M) << 16
   zMag ~>= (16)
   return
   
@@ -294,14 +294,16 @@ PUB changeRegister(addr, register, mask, value) | data
   ' Changes part of a given register with the given
   ' mask and value. Data should be same size as
   ' register.
-  data := \I2C.readWordB(addr, register)
+  'data := \I2C.readWordB(ACCELEROMETER_ADDR, register)
+  data := \I2C.readByte(ACCELEROMETER_ADDR, register)
   data := data & !mask
   data := data | value
-  \I2C.writeWordB(addr, register, data)
+ ' \I2C.writeWordB(ACCELEROMETER_ADDR, register, data)
+  \I2C.writeByte(ACCELEROMETER_ADDR, register, data)
   
 PUB readReg(adr) : t
-  t := I2C.readByte(DevAdr, adr) 
+  t := I2C.readByte(MAGNETOMETER_ADDR, adr)
 
 PUB writeReg(adr, data) : t
-  t := I2C.writeByte(DevAdr, adr, data)
+  t := I2C.writeByte(MAGNETOMETER_ADDR, adr, data)
   
