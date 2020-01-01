@@ -117,7 +117,7 @@ PUB setAccBlockDataUpdate(bdu)
 
 PUB setAccAxisEnable(x_en, y_en, z_en) | config
   ' Set axes enabled in x, y, z order. (1) = enable, (0) = disable
-  config := z_en << 2 | y_en << 1 | x_en
+  config := (z_en << 2) | (y_en << 1) | (x_en)
   changeRegister(ACCELEROMETER_ADDR, CTRL_REG1_A, %0000_0111, config)
   
 
@@ -237,7 +237,7 @@ PUB setMagSensorMode(mode)
   ' 2 = Power-down mode
   ' 3 = Power-down mode
   ' Default is 3 (power-down)
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG3_M, %0000_0011, $1)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG3_M, %0000_0011, mode)
   
   
 PUB setMagZAxisMode(mode)
@@ -258,14 +258,16 @@ PUB setMagBlockDataUpdate(bdu)
     bdu := $1
   else
     bdu := $0
-  changeRegister(MAGNETOMETER_ADDR, CTRL_REG5_A, %0100_0000, bdu << 6)
+  changeRegister(MAGNETOMETER_ADDR, CTRL_REG5_M, %0100_0000, bdu << 6)
 
 
 PUB getTemperature : temp
   temp := \I2C.readByte(MAGNETOMETER_ADDR, TEMP_H_M) << 24
   temp |= \I2C.readByte(MAGNETOMETER_ADDR, TEMP_L_M) << 16
   temp ~>= (20)
-  ' Do calibration here
+  temp := temp * 125
+  temp := temp + 25000
+  ' Do calibration here          
   return
 
 PUB getXMag : xMag
@@ -295,15 +297,15 @@ PUB changeRegister(addr, register, mask, value) | data
   ' mask and value. Data should be same size as
   ' register.
   'data := \I2C.readWordB(ACCELEROMETER_ADDR, register)
-  data := \I2C.readByte(ACCELEROMETER_ADDR, register)
+  data := \I2C.readByte(addr, register)
   data := data & !mask
   data := data | value
  ' \I2C.writeWordB(ACCELEROMETER_ADDR, register, data)
-  \I2C.writeByte(ACCELEROMETER_ADDR, register, data)
+  \I2C.writeByte(addr, register, data)
   
-PUB readReg(adr) : t
-  t := I2C.readByte(MAGNETOMETER_ADDR, adr)
+PUB readReg(dev_ad, adr) : t
+  t := I2C.readByte(dev_ad, adr)
 
-PUB writeReg(adr, data) : t
-  t := I2C.writeByte(MAGNETOMETER_ADDR, adr, data)
+PUB writeReg(dev_adr, adr, data) : t
+  t := I2C.writeByte(dev_adr, adr, data)
   
